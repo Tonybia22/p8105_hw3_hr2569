@@ -1,0 +1,89 @@
+---
+title: "hw3_P8105_hr2569"
+author: "Hongzhu Ren"
+date: "2023-10-11"
+output: github_document
+---
+```{r setup, include=FALSE}
+library(tidyverse)
+library(p8105.datasets)
+```
+
+# Problem 1
+```{r instacart_import}
+data("instacart")
+```
+This dataset contains `r nrow(instacart)` data of `r ncol(instacart)` variables, consisting of *`r colnames(instacart)`*. 
+
+Each data illustrates a specific order, containing id of order, product, user, ailse and department. order_dow, order_hour_of_day, days_since_prior_order describe the order time. reorder=1 indicates this this product has been ordered by the user in the past.
+
+```{r aisle}
+aisle_uni <- instacart |> 
+  pull(aisle) |> 
+  unique()
+
+aisle_order <- instacart |> 
+  group_by(aisle) |> 
+  summarize(
+    orders = length(unique(order_id))
+  ) |> 
+  arrange(desc(orders))
+```
+In total there are *`r length(aisle_uni)`* aisles, the aisles with most items orderer is *`r aisle_order[1,1]`*
+
+```{r aisle_plot}
+aisle_order |> 
+  filter(orders > 10000)|> 
+  mutate(
+    aisle = fct_reorder(aisle, orders) # order aisles with ascending order of order numbers
+  ) |> 
+  ggplot(aes(x = aisle, y = orders))+
+  geom_bar(stat = "identity")+
+  labs(
+    title = "order numbers of each aisle"
+  )+
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # rotate x-axis labels
+```
+
+We can see from the plot that the top three ordered aisles are fresh fruits, fresh vegetables, packaged vegetables fruits.
+```{r popluar_items}
+items_order = instacart |> 
+  filter(
+    aisle %in% c("baking ingredients","dog food care","packaged vegetables fruits")
+  ) |> 
+  group_by(aisle, product_name) |> 
+  summarise(
+    orders = length(unique(order_id)) # calculate orders of each items
+  ) |> 
+  ungroup() |> 
+  group_by(aisle) |> 
+  arrange(desc(orders)) |> 
+  slice_head(n = 3) # select items in each groups with top three orders
+
+knitr::kable(items_order)
+```
+
+From the table, we can see that top three ordered items of packaged vegetables has much more orders than the others. 
+```{r hour_of_the_day}
+items_time <- instacart |> 
+  filter(
+    product_name %in% c("Pink Lady Apples","Coffee Ice Cream")
+  ) |> 
+  group_by(order_dow, product_name) |> 
+  summarise(
+    mean_hour = mean(order_hour_of_day)
+  ) |> 
+  pivot_wider(
+    names_from = "product_name",
+    values_from = "mean_hour"
+  ) |> 
+  round(digits = 2) |> 
+  t()
+
+knitr::kable(items_time[c(2,3),])
+```
+The table shows that Pink Lady Apples were usually purchased earlier than Coffee Ice Cream except Friday. The lag reaches longest on Thursday.
+
+# Problem 2
+
